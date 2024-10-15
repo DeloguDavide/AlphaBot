@@ -1,48 +1,37 @@
-# Importazione della libreria socket
-import socket as s
+import socket
+from pynput import keyboard
 
 # Definizione dell'indirizzo del server
-server_tcp_address = ("10.210.0.49", 12345)
+server_tcp_address = ("192.168.1.21", 12345)
 
 # Creazione del socket TCP del client
-client_tcp = s.socket(s.AF_INET, s.SOCK_STREAM)
+client_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_tcp.connect(server_tcp_address)
 
-try:
-    # Connessione al server
-    client_tcp.connect(server_tcp_address)
-    
-    # Stampa delle istruzioni per l'utente
-    print("""in questo programma gestirai la posizione virtuale di un robot,
-    per gestirla devi utilizzare le funzioni:
-    1 - forward
-    2 - backward
-    3 - right
-    4 - left
-    per uscire dalla connessione scrivi 'end'""")
-    
-    # Input dell'utente per la funzione e la potenza
-    messaggio=input("Inserisci il numero della funzione e la potenza tra 0-100(num, power):  ")   
-    
-    # Ciclo per inviare i comandi al server
-    while messaggio!="end":
-        # Invio del messaggio al server
-        client_tcp.send(messaggio.encode('utf-8'))
-        
-        # Ricezione della risposta dal server
-        messaggio = client_tcp.recv(4096).decode('utf-8')
-        
-        # Stampa della risposta del server
-        print(f"Il server dice: {messaggio}")
-        
-        # Input dell'utente per la funzione e la potenza
-        messaggio=input("Inserisci il numero della funzione e la potenza tra 0-100(num, power):  ")
+# Funzione per inviare il comando al server
+def invia_comando(func, power=50):
+    messaggio = f"{func},{power}"
+    client_tcp.send(messaggio.encode('utf-8'))
 
-except KeyboardInterrupt:
-    # Stampa di un messaggio di interruzione del programma
-    print("\nProgramma interrotto da CTRL + C")
+# Funzione per gestire i tasti premuti
+def on_press(key):
+    try:
+        if key.char == 'w':
+            invia_comando('1')  # Avanti
+        elif key.char == 's':
+            invia_comando('2')  # Indietro
+        elif key.char == 'd':
+            invia_comando('3')  # Destra
+        elif key.char == 'a':
+            invia_comando('4')  # Sinistra
+        elif key.char == 'q':
+            invia_comando('stop')  # Stop
+    except AttributeError:
+        pass
 
-# Stampa di un messaggio di chiusura della connessione
-print("Chiusura della connessione...")
+# Listener per i tasti premuti
+with keyboard.Listener(on_press=on_press) as listener:
+    listener.join()
 
-# Chiusura del socket del client
+# Chiudi la connessione TCP
 client_tcp.close()

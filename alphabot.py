@@ -1,56 +1,60 @@
-# Importazione della libreria socket
-import socket as s
+import socket
+import alphabotlib as ab  # Importa la libreria Alphabot per il controllo
+import threading
+
+# Inizializza l'Alphabot
+alphabot = ab.AlphaBot()
+
+# Definizione dell'indirizzo del server e porta
+server_address = ("192.168.1.21", 12345)
+
+# Definizione della dimensione del buffer
+BUFFER_SIZE = 4096
 
 # Creazione del socket TCP
-alphabot_tcp = s.socket(s.AF_INET, s.SOCK_STREAM)
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(server_address)
 
-# Definizione dell'indirizzo del server
-server_tcp_address = ("10.210.0.164", 12345)
+# Ascolto delle connessioni
+server_socket.listen(1)
+print("Server TCP in ascolto...")
 
-# Associazione del socket all'indirizzo del server
-alphabot_tcp.bind(server_tcp_address)
+def gestisci_comando(messaggio):
+    # Comando nel formato: "direzione,potenza"
+    comando, potenza = messaggio.split(',')
+    potenza = int(potenza)
 
-# Attivazione della modalità di ascolto del socket
-alphabot_tcp.listen(1)
+    # Mappa dei comandi e corrispondenti movimenti
+    if comando == '1':
+        alphabot.forward(potenza)
+    elif comando == '2':
+        alphabot.backward(potenza)
+    elif comando == '3':
+        alphabot.right(potenza)
+    elif comando == '4':
+        alphabot.left(potenza)
+    elif comando == 'stop':
+        alphabot.stop()
 
-try:
-    # Ciclo infinito per accettare le connessioni dei client
+# Funzione per gestire la comunicazione con il client
+def ricevi_comandi():
     while True:
-        # Accettazione della connessione del client
-        client, address = alphabot_tcp.accept()
-        
-        # Ricezione del messaggio dal client
-        messaggio = client.recv(4096).decode('utf-8')
-        
-        # Ciclo per elaborare i comandi ricevuti dal client
-        while messaggio != "end":
-            # Suddivisione del messaggio in due parti separate da una virgola
-            messaggio = messaggio.split(sep=",")
-            
-            # Estrazione della funzione e della potenza dal messaggio
-            func = int(messaggio[0])
-            power = int(messaggio[1])
-            
-            # Elaborazione del comando ricevuto
-            if func == 1:
-                messaggio = f"forward, con potenza {power}"
-            elif func == 2:
-                messaggio = f"backward, con potenza {power}"
-            elif func == 3:
-                messaggio = f"right, con potenza {power}"
-            elif func == 4:
-                messaggio = f"left, con potenza {power}"
-            else:
-                messaggio = "error"
-            
-            # Invio della risposta al client
-            client.send(messaggio.encode('utf-8'))
-            
-            # Ricezione del nuovo messaggio dal client
-            messaggio = client.recv(4096).decode('utf-8')
-except KeyboardInterrupt:
-    # Stampa di un messaggio di chiusura del socket in caso di interruzione
-    print("Chiusura del socket...")
+        client_socket, client_address = server_socket.accept()
+        print(f"Connessione accettata da {client_address}")
 
-# Chiusura del socket
-alphabot_tcp.close()
+        while True:
+            messaggio = client_socket.recv(BUFFER_SIZE).decode('utf-8')
+            if not messaggio:
+                break  # Se il messaggio è vuoto, esce dal ciclo
+
+            print(f"Messaggio ricevuto dal client: {messaggio}")
+            gestisci_comando(messaggio)
+
+            # Risposta al client
+            client_socket.send(f"Server ha ricevuto: {messaggio}".encode('utf-8'))
+
+        client_socket.close()
+
+# Thread per gestire la ricezione dei comandi
+server_thread = threading.Thread(target=ricevi_comandi)
+server_thread.start()
