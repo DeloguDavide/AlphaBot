@@ -1,70 +1,57 @@
 import socket
-# import alphabotlib as ab  # Importa la libreria Alphabot per il controllo
-import threading
+import alphaLib
 
-# Definizione della dimensione del buffer
-BUFFER_SIZE = 4096
+# Creazione del socket TCP
+alphabot_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-def main():
-    # Inizializza l'Alphabot
-    #alphabot = ab.AlphaBot()
+# Definizione dell'indirizzo del server (IP e porta)
+alphabot_address = ("192.168.1.129", 34512)
 
-    # Definizione dell'indirizzo del server e porta
-    server_address = ("192.168.122.19", 12345)
+# Associazione del socket all'indirizzo del server
+alphabot_tcp.bind(alphabot_address)
 
-    # Creazione del socket TCP
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(server_address)
+# Imposta il server in modalità di ascolto per le connessioni in ingresso
+alphabot_tcp.listen(1)
+print("Server AlphaBot in ascolto...")
 
-    # Ascolto delle connessioni
-    server_socket.listen(1)
-    print("Server TCP in ascolto...")
-    # Thread per gestire la ricezione dei comandi
-    server_thread = threading.Thread(target=ricevi_comandi, args=(server_socket,))
-    server_thread.start()
-
-def gestisci_comando(messaggio):
-    # Comando nel formato: "direzione,potenza"
-    comando, potenza = messaggio.split(',')
-    potenza = int(potenza)
-    messaggio = ""
-    # Mappa dei comandi e corrispondenti movimenti
-    if comando == '1':
-        messaggio = "forward"
-        # alphabot.forward(potenza)
-    elif comando == '2':
-        messaggio = "backward"
-        # alphabot.backward(potenza)
-    elif comando == '3':
-        messaggio = "right"
-        # alphabot.right(potenza)
-    elif comando == '4':
-        messaggio = "left"
-        # alphabot.left(potenza)
-    elif comando == 'stop':
-        messaggio = "stop"
-        # alphabot.stop()
-    return messaggio
-# Funzione per gestire la comunicazione con il client
-def ricevi_comandi(server_socket):
+alphabotlib = alphaLib.AlphaBot()
+alphabotlib.stop()
+# Loop principale che accetta le connessioni dal client
+try:
     while True:
-        client_socket, client_address = server_socket.accept()
-        print(f"Connessione accettata da {client_address}")
+        # Accetta la connessione del client
+        client, address = alphabot_tcp.accept()
+        print(f"Connessione accettata da {address}")
 
+        # Riceve i comandi dal client
         while True:
-            print("client connesso!")
-            messaggio = client_socket.recv(BUFFER_SIZE).decode('utf-8')
+            messaggio = client.recv(4096).decode('utf-8')
+            if not messaggio:
+                break  # Chiude la connessione se non ci sono più messaggi
 
-            print(f"Messaggio ricevuto dal client: {messaggio}")
-            mex = gestisci_comando(messaggio)
+            print(f"Comando ricevuto: {messaggio}")
 
-            if mex == "stop":
+            # Interpretazione dei comandi per muovere l'AlphaBot
+            if messaggio == 'w':
+                alphabotlib.forward()  # Avanti
+            elif messaggio == 'a':
+                alphabotlib.left()     # Sinistra
+            elif messaggio == 'd':
+                alphabotlib.right()    # Destra
+            elif messaggio == 's':
+                alphabotlib.backward() # Indietro
+            elif messaggio == 'stop':
+                alphabotlib.stop()     # Stop
+            elif messaggio == 'end':
+                print("Chiusura connessione...")
+                client.close()         # Chiude la connessione al client
                 break
+            else:
+                print("Comando non riconosciuto.")
 
-            # Risposta al client (use client_socket here instead of server_socket)
-            client_socket.send(f"Server ha ricevuto: {mex}".encode('utf-8'))
-
-        client_socket.close()
-
-if __name__ == "__main__":
-    main()
+except KeyboardInterrupt:
+    print("Server interrotto manualmente.")
+finally:
+    # Chiude il socket del server
+    alphabot_tcp.close()
+    print("Server chiuso.")
