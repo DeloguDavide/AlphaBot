@@ -10,7 +10,7 @@ def main():
     #alphabot = ab.AlphaBot()
 
     # Definizione dell'indirizzo del server e porta
-    server_address = ("192.168.69.19", 12345)
+    server_address = ("192.168.122.19", 12345)
 
     # Creazione del socket TCP
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
